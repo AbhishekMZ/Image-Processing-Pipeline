@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 # Parameters
-input_file = "try.raw"
+input_file = "assignmentrawinput1.raw"
 width = 1920
 height = 1280
 gamma = 0.9  # Adjusted gamma for balanced contrast
