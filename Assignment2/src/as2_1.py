@@ -1,186 +1,230 @@
+"""
+Image Analysis Module
+This module provides advanced analysis tools for evaluating image quality,
+including SNR measurements and tone region analysis.
+"""
+
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
 def load_raw_image(file_path, width=1920, height=1280):
-    """Load raw image data."""
+    """
+    Load raw image data and convert to 8-bit format.
+    
+    Args:
+        file_path: Path to raw image file
+        width: Image width (default: 1920)
+        height: Image height (default: 1280)
+    
+    Returns:
+        Processed image array or None if error
+    """
     try:
-        raw_image = np.fromfile(file_path, dtype=np.uint16)
-        raw_image = raw_image.reshape((height, width))
-        # Convert 12-bit to 8-bit
-        raw_image = (raw_image >> 4).astype(np.uint8)
-        return raw_image
+        raw_data = np.fromfile(file_path, dtype=np.uint16)
+        raw_data = raw_data.reshape((height, width))
+        return (raw_data >> 4).astype(np.uint8)
     except Exception as e:
         print(f"Error loading raw image: {e}")
         return None
 
-def apply_denoising_filters(image):
-    """Apply different denoising filters."""
-    # Gaussian Filter (5x5 kernel)
-    gaussian = cv2.GaussianBlur(image, (5, 5), 0)
-    
-    # Median Filter (5x5 kernel)
-    median = cv2.medianBlur(image, 5)
-    
-    # Bilateral Filter
-    bilateral = cv2.bilateralFilter(image, d=9, sigmaColor=75, sigmaSpace=75)
-    
-    return gaussian, median, bilateral
-
-def compute_spatial_snr(image, region_coords):
+def compute_snr(signal_region, noise_region):
     """
-    Compute spatial SNR for a specific region.
-    SNR = 20 * log10(signal/noise) where:
-    - signal is the mean pixel value in the region
-    - noise is the standard deviation of pixel values
+    Calculate Signal-to-Noise Ratio in decibels.
+    
+    Args:
+        signal_region: Region containing the signal
+        noise_region: Region containing noise
+    
+    Returns:
+        SNR value in dB
     """
-    y1, y2, x1, x2 = region_coords
-    region = image[y1:y2, x1:x2]
-    
-    signal = np.mean(region)
-    noise = np.std(region)
-    
-    if noise == 0:
+    signal_power = np.mean(signal_region)
+    noise_power = np.std(noise_region)
+    if noise_power == 0:
         return float('inf')
-    
-    snr = 20 * np.log10(signal / noise)
-    return snr
+    return 20 * np.log10(signal_power / noise_power)
 
 def analyze_tone_regions(image):
     """
-    Analyze different tone regions in the image and return their coordinates.
-    Returns regions representing dark, medium, and bright areas.
+    Analyze different tone regions in the image.
+    
+    Segments image into dark, medium, and bright regions.
+    
+    Args:
+        image: Input image array
+    
+    Returns:
+        Dictionary of tone regions and their masks
     """
-    # Convert to grayscale if not already
-    if len(image.shape) == 3:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = image
+    # Define tone region thresholds
+    dark_threshold = 64
+    bright_threshold = 192
     
-    # Calculate histogram
-    hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+    # Create masks for each region
+    dark_mask = image < dark_threshold
+    bright_mask = image > bright_threshold
+    medium_mask = ~(dark_mask | bright_mask)
     
-    # Find percentiles for dark, medium, and bright regions
-    total_pixels = gray.shape[0] * gray.shape[1]
-    cumsum = np.cumsum(hist.flatten())
-    
-    # Find threshold values for different tones
-    dark_threshold = np.searchsorted(cumsum, 0.15 * total_pixels)
-    bright_threshold = np.searchsorted(cumsum, 0.85 * total_pixels)
-    
-    # Create masks for different tone regions
-    dark_mask = gray < dark_threshold
-    medium_mask = (gray >= dark_threshold) & (gray < bright_threshold)
-    bright_mask = gray >= bright_threshold
-    
-    # Find regions for each tone
-    def find_region(mask, size=100):
-        y_coords, x_coords = np.where(mask)
-        if len(y_coords) == 0:
-            return None
-        
-        # Find center of largest continuous region
-        center_y = (np.min(y_coords) + np.max(y_coords)) // 2
-        center_x = (np.min(x_coords) + np.max(x_coords)) // 2
-        
-        # Define region around center
-        half_size = size // 2
-        return (
-            max(0, center_y - half_size),
-            min(gray.shape[0], center_y + half_size),
-            max(0, center_x - half_size),
-            min(gray.shape[1], center_x + half_size)
-        )
-    
-    regions = {
-        'Dark': find_region(dark_mask),
-        'Medium': find_region(medium_mask),
-        'Bright': find_region(bright_mask)
+    return {
+        'dark': dark_mask,
+        'medium': medium_mask,
+        'bright': bright_mask
     }
-    
-    return regions
 
-def print_snr_analysis(method_name, snr_values):
-    """Print SNR analysis results in a formatted way."""
-    print(f"\n{method_name} SNR Analysis:")
-    print("-" * 40)
+def apply_denoising_filters(image):
+    """
+    Apply various denoising filters for comparison.
+    
+    Args:
+        image: Input image array
+    
+    Returns:
+        Dictionary of filtered images
+    """
+    # Gaussian filter
+    gaussian = cv2.GaussianBlur(image, (5, 5), 1.0)
+    
+    # Median filter
+    median = cv2.medianBlur(image, 5)
+    
+    # Bilateral filter
+    bilateral = cv2.bilateralFilter(image, 9, 75, 75)
+    
+    return {
+        'gaussian': gaussian,
+        'median': median,
+        'bilateral': bilateral
+    }
+
+def compute_region_snr(image, region_mask):
+    """
+    Compute SNR for a specific image region.
+    
+    Args:
+        image: Input image array
+        region_mask: Boolean mask for region of interest
+    
+    Returns:
+        SNR value in dB
+    """
+    if not np.any(region_mask):
+        return 0.0
+    
+    region_data = image[region_mask]
+    signal = np.mean(region_data)
+    noise = np.std(region_data)
+    
+    if noise == 0:
+        return float('inf')
+    return 20 * np.log10(signal / noise)
+
+def print_snr_analysis(snr_values):
+    """
+    Print formatted SNR analysis results.
+    
+    Args:
+        snr_values: Dictionary of SNR values by region
+    """
+    print("----------------------------------------")
     for tone, snr in snr_values.items():
         print(f"{tone:>10} tone: {snr:>8.2f} dB")
 
 def main():
+    """
+    Execute image analysis pipeline.
+    
+    Stages:
+    1. Load and analyze raw image
+    2. Compare with denoised reference
+    3. Apply and evaluate different denoising methods
+    4. Analyze SNR in different tone regions
+    """
     # Load raw image
-    raw_path = 'assignmentrawinput2.raw'
+    raw_path = 'Assignment2/data/raw/assignmentrawinput2.raw'
     print("Loading raw image...")
     raw_image = load_raw_image(raw_path)
     if raw_image is None:
         return
 
     # Load denoised image from as2
-    denoised_path = 'as2_step4_denoised.png'
+    denoised_path = 'Assignment2/data/output/as2_step4_denoised.png'
     print("Loading reference denoised image...")
     reference_denoised = cv2.imread(denoised_path, cv2.IMREAD_GRAYSCALE)
     if reference_denoised is None:
         print(f"Error: Could not load {denoised_path}")
         return
-
-    # Apply different denoising filters
-    print("Applying denoising filters...")
-    gaussian_denoised, median_denoised, bilateral_denoised = apply_denoising_filters(raw_image)
-
+    
+    # Apply denoising filters
+    print("\nApplying denoising filters...")
+    filtered_images = apply_denoising_filters(raw_image)
+    
     # Analyze tone regions
     print("\nAnalyzing image tone regions...")
-    regions = analyze_tone_regions(raw_image)
-
-    # Dictionary of all methods and their results
-    methods = {
-        'Original Raw': raw_image,
-        'Reference Denoised': reference_denoised,
-        'Gaussian Filter': gaussian_denoised,
-        'Median Filter': median_denoised,
-        'Bilateral Filter': bilateral_denoised
-    }
-
-    # Compute and display SNR for each method and region
-    print("\nComputing SNR for different regions and methods...")
-    print("\nSpatial Signal-to-Noise Ratio Analysis")
-    print("=" * 50)
+    tone_regions = analyze_tone_regions(raw_image)
     
-    all_snr_results = {}
-    for method_name, img in methods.items():
-        snr_values = {}
-        for tone, coords in regions.items():
-            if coords is not None:
-                snr = compute_spatial_snr(img, coords)
-                snr_values[tone] = snr
-        
-        print_snr_analysis(method_name, snr_values)
-        all_snr_results[method_name] = snr_values
-
+    print("\nComputing SNR for different regions and methods...")
+    
+    print("\nSpatial Signal-to-Noise Ratio Analysis")
+    print("==================================================\n")
+    
+    # Analyze raw image
+    print("Original Raw SNR Analysis:")
+    raw_snr = {tone: compute_region_snr(raw_image, mask) 
+               for tone, mask in tone_regions.items()}
+    print_snr_analysis(raw_snr)
+    
+    # Analyze reference denoised
+    print("\nReference Denoised SNR Analysis:")
+    ref_snr = {tone: compute_region_snr(reference_denoised, mask) 
+               for tone, mask in tone_regions.items()}
+    print_snr_analysis(ref_snr)
+    
+    # Analyze filtered images
+    for filter_name, filtered_img in filtered_images.items():
+        print(f"\n{filter_name.title()} Filter SNR Analysis:")
+        filter_snr = {tone: compute_region_snr(filtered_img, mask) 
+                     for tone, mask in tone_regions.items()}
+        print_snr_analysis(filter_snr)
+    
     # Display images with region markers
     display_images = []
     display_titles = []
     
-    for method_name, img in methods.items():
+    for filter_name, filtered_img in filtered_images.items():
         # Create a copy for visualization
-        marked_img = img.copy()
+        marked_img = filtered_img.copy()
         if len(marked_img.shape) == 2:
             marked_img = cv2.cvtColor(marked_img, cv2.COLOR_GRAY2BGR)
         
         # Mark analyzed regions
         colors = {
-            'Dark': (0, 0, 255),    # Red
-            'Medium': (0, 255, 0),  # Green
-            'Bright': (255, 0, 0)   # Blue
+            'dark': (0, 0, 255),    # Red
+            'medium': (0, 255, 0),  # Green
+            'bright': (255, 0, 0)   # Blue
         }
         
-        for tone, coords in regions.items():
-            if coords is not None:
-                y1, y2, x1, x2 = coords
-                cv2.rectangle(marked_img, (x1, y1), (x2, y2), colors[tone], 2)
+        for tone, mask in tone_regions.items():
+            y_coords, x_coords = np.where(mask)
+            if len(y_coords) == 0:
+                continue
+            
+            # Find center of largest continuous region
+            center_y = (np.min(y_coords) + np.max(y_coords)) // 2
+            center_x = (np.min(x_coords) + np.max(x_coords)) // 2
+            
+            # Define region around center
+            half_size = 100 // 2
+            y1 = max(0, center_y - half_size)
+            y2 = min(marked_img.shape[0], center_y + half_size)
+            x1 = max(0, center_x - half_size)
+            x2 = min(marked_img.shape[1], center_x + half_size)
+            
+            cv2.rectangle(marked_img, (x1, y1), (x2, y2), colors[tone], 2)
         
         display_images.append(marked_img)
-        display_titles.append(f"{method_name}\nSNR: {all_snr_results[method_name]['Medium']:.1f}dB")
-
+        display_titles.append(f"{filter_name.title()}\nSNR: {filter_snr['medium']:.1f}dB")
+    
     # Display results
     plt.figure(figsize=(20, 10))
     for idx, (img, title) in enumerate(zip(display_images, display_titles), 1):
@@ -191,13 +235,12 @@ def main():
     
     plt.tight_layout()
     plt.show()
-
-    # Save results
+    
     print("\nSaving processed images...")
-    cv2.imwrite("gaussian_filtered.png", gaussian_denoised)
-    cv2.imwrite("median_filtered.png", median_denoised)
-    cv2.imwrite("bilateral_filtered.png", bilateral_denoised)
-
+    cv2.imwrite('Assignment2/data/output/as2_1_gaussian.png', filtered_images['gaussian'])
+    cv2.imwrite('Assignment2/data/output/as2_1_median.png', filtered_images['median'])
+    cv2.imwrite('Assignment2/data/output/as2_1_bilateral.png', filtered_images['bilateral'])
+    
     print("\nProcessing complete!")
 
 if __name__ == "__main__":

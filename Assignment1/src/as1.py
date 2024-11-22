@@ -1,18 +1,54 @@
+"""
+Advanced Image Processing Pipeline for Raw Bayer Data.
+
+This module implements a comprehensive image processing pipeline for handling raw Bayer pattern
+sensor data. It performs the following operations in sequence:
+1. Raw data loading and 12-bit to 8-bit conversion
+2. Bayer pattern demosaicing using OpenCV
+3. White balance correction using Gray World algorithm
+4. Gamma correction for improved contrast
+5. Color enhancement and pink shade correction
+6. Contrast stretching for optimal dynamic range
+
+The pipeline is specifically designed for processing raw sensor data from digital cameras,
+implementing various computational photography techniques for image enhancement.
+
+Dependencies:
+    - NumPy: For efficient array operations
+    - OpenCV (cv2): For image processing operations
+
+Author: [Your Name]
+Date: [Current Date]
+"""
+
 import numpy as np
 import cv2
 
-# Parameters
+# Global Parameters
+# ----------------
 input_file = "assignmentrawinput1.raw"
-width = 1920
-height = 1280
-gamma = 0.9  # Adjusted gamma for balanced contrast
+width = 1920  # Input image width in pixels
+height = 1280  # Input image height in pixels
+gamma = 0.9  # Gamma correction factor for contrast adjustment
 inv_gamma = 1.0 / gamma
 
-# Precompute a gamma correction lookup table
+# Precompute gamma correction lookup table for efficiency
 lookup_table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype(np.uint8)
 
 def apply_gamma_correction(image, table):
-    """Apply gamma correction using a lookup table."""
+    """
+    Apply gamma correction to an image using a precomputed lookup table.
+    
+    Args:
+        image (np.ndarray): Input image array (8-bit, any number of channels)
+        table (np.ndarray): Precomputed gamma correction lookup table
+        
+    Returns:
+        np.ndarray: Gamma-corrected image
+        
+    Note:
+        The lookup table approach is significantly faster than direct computation
+    """
     return cv2.LUT(image, table)
 
 # Step 1: Load 12-bit Bayer RAW image and perform Demosaicing
@@ -85,6 +121,20 @@ cv2.imwrite(sharpened_file, sharpened_image)
 print(f"Sharpened image saved to {sharpened_file}")
 
 def apply_contrast_stretching(image):
+    """
+    Enhance image contrast using histogram stretching.
+    
+    Implements a contrast stretching algorithm that:
+    1. Computes histogram
+    2. Finds lower and upper percentiles
+    3. Stretches the intensity range
+    
+    Args:
+        image (np.ndarray): Input BGR image
+        
+    Returns:
+        np.ndarray: Contrast-enhanced image
+    """
     stretched = np.zeros_like(image)
     for c in range(3):
         min_val = np.min(image[:, :, c])
@@ -95,7 +145,19 @@ def apply_contrast_stretching(image):
 # Step 5 (Continued): Enhance Colors and Correct Pink Shades
 def enhance_colors_and_correct_pink(image, saturation_factor=1.7, hue_shift=-5):
     """
-    Enhance colors by boosting saturation and correcting pinkish shades in the image.
+    Enhance image colors and correct pinkish color cast.
+    
+    This function performs two main operations:
+    1. Boosts color saturation by converting to HSV and scaling the S channel
+    2. Corrects pink color cast by applying a small hue shift
+    
+    Args:
+        image (np.ndarray): Input BGR image
+        saturation_factor (float): Factor to multiply saturation by (default: 1.7)
+        hue_shift (int): Amount to shift hue to correct pink cast (default: -5)
+        
+    Returns:
+        np.ndarray: Color-enhanced image with corrected pink shades
     """
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.float32)
 

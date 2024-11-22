@@ -1,0 +1,50 @@
+image-processing-pipeline/
+├── Assignment1/
+│   ├── src/
+│   │   ├── as1.py            # Core image processing
+│   │   └── as1_gui.py        # GUI implementation
+│   ├── tests/
+│   │   └── test_as1.py
+│   ├── data/
+│   │   ├── raw/              # Raw input images
+│   │   │   ├── assignmentrawinput1.raw
+│   │   │   └── assignmentrawinput2.raw
+│   │   └── output/           # Processing results
+│   └── README.md             # Assignment 1 specific documentation
+│
+├── Assignment2/
+│   ├── src/
+│   │   ├── as2.py           # Enhanced pipeline
+│   │   ├── as2_1.py         # Analysis tools
+│   │   └── as2_2.py         # Edge enhancement
+│   ├── tests/
+│   │   └── test_as2.py
+│   ├── data/
+│   │   ├── raw/             # Raw input images
+│   │   │   ├── assignmentrawinput1.raw
+│   │   │   └── assignmentrawinput2.raw
+│   │   └── output/          # Processing results
+│   └── README.md            # Assignment 2 specific documentation
+│
+├── Assignment3/
+│   ├── src/
+│   │   └── as3.py           # HDR processing
+│   ├── tests/
+│   │   └── test_as3.py
+│   ├── data/
+│   │   ├── hdr/             # HDR input images
+│   │   │   ├── underexposed.jpg
+│   │   │   ├── midexposed.jpg
+│   │   │   └── overexposed.jpg
+│   │   └── output/          # Processing results
+│   └── README.md            # Assignment 3 specific documentation
+│
+├── docs/                    # Documentation
+│   ├── api/                 # API documentation
+│   ├── examples/            # Usage examples
+│   └── images/             # Documentation images
+│
+├── .gitignore              # Git ignore file
+├── LICENSE                 # Project license
+├── README.md              # Main project documentation
+└── requirements.txt       # Project dependencies
