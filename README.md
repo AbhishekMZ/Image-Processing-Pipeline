@@ -362,6 +362,12 @@ python as3.py --input under.jpg normal.jpg over.jpg
    - Content-aware processing
    - Performance optimization
 
+## Documentation
+### Technical Reports
+- [View Complete Documentation](./docs/)
+- [View Report in Browser](https://docs.github.com/AbhishekMZ/Image-Processing-Pipeline/main/docs/Emmetra%20Assignment%20Report.pdf)
+- [Download Report (PDF)](https://raw.githubusercontent.com/AbhishekMZ/Image-Processing-Pipeline/main/docs/Emmetra%20Assignment%20Report.pdf)
+
 ## References
 
 ### Research Papers
