@@ -3,37 +3,36 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
+# Generated images
+*.png
+*.raw
 
-# Virtual environment
-venv/
-env/
+# Output directories
+Assignment1/data/output/*
+Assignment2/data/output/*
+Assignment3/data/output/*
+
+# Keep raw input files
+!Assignment1/data/raw/*.raw
+!Assignment2/data/raw/*.raw
+!Assignment3/data/raw/*.raw
 
 # IDE
 .vscode/
 .idea/
 
-# Output images
-*.png
-*.jpg
-*.jpeg
-*.raw
+# Environment
+venv/
+env/
+.env
 
-# Except reference images
-!desired.png
+# Temporary files
+*.tmp
+*.temp
+*.swp
 
-# Logs and databases
+# Logs
 *.log
-*.sqlite
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Documentation build
+docs/_build/
